@@ -8,15 +8,14 @@
 
 const int BUF_SIZE = 4096;
 
-// THAT WORKS!!!
-void dfs(int * fd, int * fdd) {
+void dfs(int * fd) {
     char buf2[BUF_SIZE] = {0};
     DIR *dir = opendir(".");
     for (auto rd = readdir(dir); rd != NULL; rd = readdir(dir)) {
         if (rd->d_name[0] == '.') continue;
         if (rd->d_type == DT_DIR) {
             chdir(rd->d_name);
-            dfs(fd, fdd);
+            dfs(fd);
             chdir("..");
         }
         if (rd->d_type == DT_REG) {
@@ -29,17 +28,14 @@ void dfs(int * fd, int * fdd) {
                 str[i] = c;
                 i++;
             }
-            //strcat(str, "@");
-            //strcat(str, rd->d_name);
+            strcat(str, "@");
+            strcat(str, rd->d_name);
             write(fd[1], str, sizeof(str));
-            write(fdd[1], rd->d_name, sizeof(rd->d_name));
         }
     }
 }
 
-int kmp(char * s1, char * t) {  // s = string, t = text
-	// returns number of entries of s in t
-	// > 0 if s is a substring of t
+int kmp(char * s1, char * t) {
     char s[BUF_SIZE] = {0};
     strcpy(s, s1);
     int m = strlen(s);
@@ -65,29 +61,34 @@ int kmp(char * s1, char * t) {  // s = string, t = text
 int main() {
     char pattern[BUF_SIZE] = {0};
     scanf("%s", pattern);
-    close(0);
-    close(1);
     int fd[2];
-    int fdd[2];
     pipe(fd);
-    pipe(fdd);
     pid_t pid = fork();
     if (pid == 0) {
 		close(fd[0]);
-        close(fdd[0]);
-        dfs(fd, fdd);
+        dfs(fd);
     } else {
 		close(fd[1]);
-        close(fdd[1]);
-        int rd, rdd;
+        int rd;
         char buf[BUF_SIZE] = {0};
-        char name[BUF_SIZE] = {0};
-        while ((rd = read(fd[0], buf, sizeof(buf))) > 0 && (rdd = read(fdd[0], name, sizeof(name))) > 0) {
-            if (kmp(pattern, buf) > 0) {
-				fprintf(stderr, "Pattetn found in %s\n", name);
+        while ((rd = read(fd[0], buf, sizeof(buf))) > 0) {
+            int k = kmp(pattern, buf);
+            if (k > 0) {
+				printf("Pattetn found in:\n");
+                int n = strlen(buf);
+                int i = n;
+                while (buf[i-1] != '@') {
+                    i--;
+                }
+                char name[BUF_SIZE] = {0};
+                int j = 0;
+                while (i < n) {
+                    name[j] = buf[i];
+                    i++;
+                    j++;
+                }
+                printf("  %s (entries=%d)\n", name, k);
 			}
-            fprintf(stderr, "reading:  %s\n", name);
         }
-        fprintf(stderr, "pipe is read\n");
     }
 }
