@@ -35,24 +35,31 @@ void dfs(int * fd) {
     }
 }
 
-int kmp(char * s1, char * t) {
+std::vector<std::pair<int, int> > kmp(char * s1, char * t) {
     char s[BUF_SIZE] = {0};
     strcpy(s, s1);
     int m = strlen(s);
     strcat(s, "@");
     strcat(s, t);
     int n = strlen(s);
-    int ans = 0;
+    std::vector<std::pair<int, int> > ans;
     std::vector<int> pi(n);
     pi[0] = 0;
+    int line = 1, pos = 0;
     for (int i = 1; i < n; ++i) {
+        pos++;
+        if (s[i-1] == '\n') {
+            line++;
+            pos = 1;
+        }
         int j = pi[i-1];
         while (j > 0 && s[i] != s[j])
             j = pi[j-1];
         if (s[i] == s[j]) j++;
         pi[i] = j;
         if (pi[i] == m) {
-            ans++;
+            std::pair<int, int> lp = std::make_pair(line, pos);
+            ans.push_back(lp);
         }
     }
     return ans;
@@ -63,7 +70,7 @@ int main() {
     scanf("%s", pattern);
     int fd[2];
     pipe(fd);
-    pid_t pid = fork();
+    pid_t pid = fork();	
     if (pid == 0) {
 		close(fd[0]);
         dfs(fd);
@@ -72,8 +79,9 @@ int main() {
         int rd;
         char buf[BUF_SIZE] = {0};
         while ((rd = read(fd[0], buf, sizeof(buf))) > 0) {
-            int k = kmp(pattern, buf);
-            if (k > 0) {
+            std::vector<std::pair<int, int> > k = kmp(pattern, buf);
+            int m = k.size();
+            if (m > 0) {
 				printf("Pattetn found in:\n");
                 int n = strlen(buf);
                 int i = n;
@@ -87,7 +95,9 @@ int main() {
                     i++;
                     j++;
                 }
-                printf("  %s (entries=%d)\n", name, k);
+                printf(" %s\n", name);
+                for (j = 0; j < m; ++j)
+                    printf("  line: %d pos: %d\n", k[j].first, k[j].second);
 			}
         }
     }
