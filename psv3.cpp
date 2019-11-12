@@ -17,11 +17,21 @@ void * func(void * someUselessInformation) {
   return NULL;
 }
 
+void getCurrentDirName(char * name) {
+    char buf[BUF_SIZE] = {0};
+    getcwd(buf, sizeof(buf));
+    int n = strlen(buf);
+    while (n > 0 && buf[n] != '/') {
+        n--;
+    }
+    strcpy(name, buf + n + 1);
+}
+
 std::vector<std::pair<int, int> > kmp(char * s1, char * t) {
     char s[BUF_SIZE] = {0};
     strcpy(s, s1);
     int m = strlen(s);
-    strcat(s, "@");
+    strcat(s, "~");
     strcat(s, t);
     int n = strlen(s);
     std::vector<std::pair<int, int> > ans;
@@ -48,22 +58,28 @@ std::vector<std::pair<int, int> > kmp(char * s1, char * t) {
 }
 
 std::map<const char*, bool> threads_in_dir;
+const char * baseDirName = "Info";
 
 void * dfs(void * fd) {
   char buf2[BUF_SIZE] = {0};
   DIR *dir = opendir(".");
+  char name[BUF_SIZE] = {0};
+  getCurrentDirName(name);
+  printf("> %s\n", name);
   for (auto rd = readdir(dir); rd != NULL; rd = readdir(dir)) {
     if (rd->d_name[0] == '.') continue;
     if (rd->d_type == DT_DIR) {
       if (threads_in_dir[rd->d_name] != true) {
         chdir(rd->d_name);
         dfs(fd);
-        chdir("..");
-        threads_in_dir[rd->d_name] = true;
+        if (strcmp(name, baseDirName) != 0) {
+          chdir("..");
+        }
+        threads_in_dir[name] = true;
       }
     }
     if (rd->d_type == DT_REG) {
-      printf("file: %s\n", rd->d_name);
+      //printf("file: %s\n", rd->d_name);
       /*FILE * f;
       f = fopen(rd->d_name, "r");
       char str[BUF_SIZE] = {0};
